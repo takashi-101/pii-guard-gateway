@@ -181,5 +181,13 @@ tests/            ユニットテスト
 .github/workflows/tests.yml  CI（Python 3.11 と 3.12、テストと見本データでの実行）
 ```
 
+## 根拠（学習）
+
+| 機能 | 裏付けになる学習（発行元・名称・発行日） | 照会先（Credly） |
+|---|---|---|
+| AIへ渡す前の個人情報の置き換え（氏名・電話・メール・個人番号・住所・金額） | Coursera（認定：IBM）「Generative AI: Impact, Considerations, and Ethical Issues」2026年11月11日 | https://www.credly.com/badges/17087670-8825-43bc-8c8e-b4dd9b98cc8a |
+| ハッシュチェーンによる監査ログと改ざんの検出 | Coursera「Google Cybersecurity Professional Certificate(v.2)」2026年11月12日 | https://www.credly.com/badges/90bbb775-f9b8-4aef-bc24-1ed7c67d17e4 |
+| 外部へ送信する機能を持たない構成 | Amazon Web Services Training and Certification「AWS Knowledge: Security Champion - Training Badge」2025年11月10日 | https://www.credly.com/badges/ddab077d-58eb-4807-bec1-69e5c6aeb9a5 |
+
 ## ライセンス
 MIT（[LICENSE](LICENSE)）
