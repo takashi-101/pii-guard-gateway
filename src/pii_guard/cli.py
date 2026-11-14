@@ -42,8 +42,8 @@ def cmd_sanitize_csv(args: argparse.Namespace) -> int:
             {
                 "processed_rows": processed,
                 "total_masked_entities": total_masked,
-                "output": str(out_path),
-                "audit_log": str(args.audit_log),
+                "output": out_path.as_posix(),
+                "audit_log": Path(args.audit_log).as_posix(),
             },
             ensure_ascii=False,
         )

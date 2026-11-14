@@ -1,6 +1,7 @@
-"""Automated verification suite for PII Guard Gateway."""
+"""Automated verification suite for PII Guard Gateway (all sample data is fictitious)."""
 
 import json
+import re
 import sys
 import tempfile
 import unittest
@@ -14,24 +15,24 @@ from pii_guard import AuditLogger, PIISanitizer, PolicyConfig
 class TestPIIGuard(unittest.TestCase):
     def test_masks_all_japanese_pii_categories(self) -> None:
         raw = (
-            "氏名：山田 太郎\n"
-            "住所：福岡県太宰府市五条1-1-1\n"
-            "〒818-0125\n"
-            "電話：090-1234-5678\n"
-            "メール：taro.yamada@example.jp\n"
-            "番号：1234-5678-9012\n"
+            "氏名：架空 太郎\n"
+            "住所：見本県架空市テスト町1-2-3\n"
+            "〒000-0000\n"
+            "電話：000-0000-0000\n"
+            "メール：kakuu.taro@example.jp\n"
+            "番号：0000-0000-0000\n"
             "金額：150万円"
         )
         sanitizer = PIISanitizer()
         res = sanitizer.sanitize(raw)
 
         for secret in [
-            "山田 太郎",
-            "福岡県太宰府市五条1-1-1",
-            "818-0125",
-            "090-1234-5678",
-            "taro.yamada@example.jp",
-            "1234-5678-9012",
+            "架空 太郎",
+            "見本県架空市テスト町1-2-3",
+            "000-0000",
+            "000-0000-0000",
+            "kakuu.taro@example.jp",
+            "0000-0000-0000",
             "150万円",
         ]:
             self.assertNotIn(secret, res.sanitized_text)
@@ -46,9 +47,21 @@ class TestPIIGuard(unittest.TestCase):
         restored = res.restore(ai_out)
         self.assertIn("a@example.com", restored)
 
+    def test_restore_only_replaces_exact_placeholders(self) -> None:
+        res = PIISanitizer().sanitize("氏名：架空 太郎")
+        self.assertEqual(res.restore("[PERSON_1] 様"), "架空 太郎 様")
+        # If the AI response alters the placeholder, it is not restored.
+        self.assertEqual(res.restore("PERSON_1 様"), "PERSON_1 様")
+        self.assertNotIn("架空 太郎", repr(res))
+
     def test_fail_closed_on_non_string(self) -> None:
         with self.assertRaises(TypeError):
             PIISanitizer().sanitize(None)  # type: ignore[arg-type]
+
+    def test_fail_closed_on_invalid_custom_pattern(self) -> None:
+        policy = PolicyConfig(custom_patterns=(("BROKEN", "(unclosed"),))
+        with self.assertRaises(re.error):
+            PIISanitizer(policy).sanitize("氏名：架空 太郎")
 
     def test_audit_log_contains_zero_raw_pii_and_detects_tampering(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -56,15 +69,15 @@ class TestPIIGuard(unittest.TestCase):
             logger = AuditLogger(log_path)
             sanitizer = PIISanitizer()
 
-            r1 = sanitizer.sanitize("氏名：鈴木 一郎 / 電話：092-000-0000")
-            r2 = sanitizer.sanitize("メール：hanako@example.org")
+            r1 = sanitizer.sanitize("氏名：見本 一郎 / 電話：00-000-0000")
+            r2 = sanitizer.sanitize("メール：mihon.hanako@example.jp")
             logger.record("staff-01", "prompt_sanitize", r1)
             logger.record("staff-02", "prompt_sanitize", r2)
 
             raw_log = log_path.read_text(encoding="utf-8")
-            self.assertNotIn("鈴木 一郎", raw_log)
-            self.assertNotIn("092-000-0000", raw_log)
-            self.assertNotIn("hanako@example.org", raw_log)
+            self.assertNotIn("見本 一郎", raw_log)
+            self.assertNotIn("00-000-0000", raw_log)
+            self.assertNotIn("mihon.hanako@example.jp", raw_log)
             self.assertNotIn("staff-01", raw_log)
 
             valid, count = logger.verify_chain()
@@ -82,21 +95,20 @@ class TestPIIGuard(unittest.TestCase):
             self.assertFalse(valid_after)
 
     def test_custom_policy_pattern(self) -> None:
-        policy = PolicyConfig(custom_patterns=(("DOC_ID", r"鳥商高第\d+号"),))
-        res = PIISanitizer(policy).sanitize("文書番号：鳥商高第1480号を受領")
-        self.assertNotIn("鳥商高第1480号", res.sanitized_text)
+        policy = PolicyConfig(custom_patterns=(("DOC_ID", r"見本第\d+号"),))
+        res = PIISanitizer(policy).sanitize("文書番号：見本第0001号を受領")
+        self.assertNotIn("見本第0001号", res.sanitized_text)
         self.assertEqual(res.counts_by_type["DOC_ID"], 1)
 
-
-
     def test_single_line_slash_separated_record_preserves_structure(self) -> None:
-        raw = "氏名：山田 太郎 / 連絡先：090-1234-5678 / メール：taro.yamada@example.jp / 申請額：150万円の件で確認したい。"
+        raw = "氏名：架空 太郎 / 連絡先：000-0000-0000 / メール：kakuu.taro@example.jp / 申請額：150万円の件で確認したい。"
         res = PIISanitizer().sanitize(raw)
         self.assertIn("[PERSON_1]", res.sanitized_text)
         self.assertIn("[PHONE_1]", res.sanitized_text)
         self.assertIn("[EMAIL_1]", res.sanitized_text)
         self.assertIn("[AMOUNT_1]", res.sanitized_text)
         self.assertIn("の件で確認したい。", res.sanitized_text)
+
 
 if __name__ == "__main__":
     unittest.main()

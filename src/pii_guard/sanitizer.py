@@ -192,7 +192,13 @@ class AuditLogger:
         return entry
 
     def verify_chain(self) -> Tuple[bool, int]:
-        """Verifies integrity of the entire audit log. Returns (is_valid, record_count)."""
+        """Verifies integrity of the entire audit log. Returns (is_valid, record_count).
+
+        Detects: edited fields, deleted lines (except the last one), reordered or
+        inserted lines, and lines that are not valid JSON objects.
+        Does not detect: deletion of trailing lines, a fully re-hashed chain
+        (no secret key is used), or a missing log file (reported as (True, 0)).
+        """
         if not self.log_path.exists():
             return True, 0
         lines = [
@@ -202,7 +208,12 @@ class AuditLogger:
         ]
         expected_prev = self.GENESIS_HASH
         for line in lines:
-            entry = json.loads(line)
+            try:
+                entry = json.loads(line)
+            except ValueError:
+                return False, len(lines)
+            if not isinstance(entry, dict):
+                return False, len(lines)
             if entry.get("prev_hash") != expected_prev:
                 return False, len(lines)
             recorded_hash = entry.get("record_hash")
