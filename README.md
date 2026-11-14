@@ -1,14 +1,12 @@
 # PII Guard Gateway：AIへ渡す前に個人情報を置き換える前処理と、改ざんに気づける監査ログ
 
-[![tests](https://github.com/takashi-101/pii-guard-gateway/actions/workflows/tests.yml/badge.svg)](https://github.com/takashi-101/pii-guard-gateway/actions/workflows/tests.yml)
-
 問い合わせ文などのテキストから、氏名・電話・メール・個人番号・住所・金額を検出して `[PERSON_1]` のような目印に置き換え、処理の記録を監査ログに残すツールです。外部へ送信する機能はありません。置き換えた結果を外部のAIなどへ渡すのは、利用する側の処理です。
 
 ## 30秒で読む要点
 - **置き換えてから渡す**：6つの対象を正規表現（文字の並びのパターン）で検出し、`[PERSON_1]` などのプレースホルダー（置き換え後の目印）にします。元の値との対応表はメモリ上だけに持ち、ファイルやログには書きません。
 - **検出できない範囲を明記**：氏名と住所は「氏名：」「住所：」のようなラベルの後ろだけが対象です。対象ごとに、検出する例と検出しない例をテストで固定し、[検出できない範囲](#検出できない範囲) にまとめています。
 - **改ざんに気づける監査ログ**：ハッシュチェーン（各行に、直前の行の内容から計算した値＝ハッシュ値を持たせてつないだもの）で、元の値は書かず、件数・種別・時刻・操作者IDのハッシュ値を記録します。値の書き換え・先頭や途中の行の削除・行の入れ替えは `verify-log` で検出します。末尾の行の削除など、検出できない改ざんも書いています。
-- **標準ライブラリのみ**：外部パッケージ・有料API・APIキーは使いません。テスト48件と見本データでの実行を、CI（GitHub Actions による自動実行）で Python 3.11 と 3.12 について行います。
+- **標準ライブラリのみ**：外部パッケージ・有料API・APIキーは使いません。テストは48件です。
 
 ## 処理の流れ
 1. 入力：文字列（Pythonから呼ぶ場合）、またはCSVの各セル（CLI＝コマンドラインから使う場合）
@@ -66,7 +64,7 @@
 - 小数は一部だけ置き換わります：`1.5億円` → `1.[AMOUNT_1]`
 
 ## 実行
-Python 3.11 以上（CIでは 3.11 と 3.12）。インストールは不要です。リポジトリ直下で実行します。
+Python 3.11 以上。インストールは不要です。リポジトリ直下で実行します。
 
 ```
 python -m unittest discover -s tests -v
@@ -178,16 +176,17 @@ src/pii_guard/
 pii_guard_cli.py  リポジトリ直下からCLIを動かす入口
 examples/         見本データ（架空）
 tests/            ユニットテスト
-.github/workflows/tests.yml  CI（Python 3.11 と 3.12、テストと見本データでの実行）
 ```
 
 ## 根拠（学習）
 
-| 機能 | 裏付けになる学習（発行元・名称・発行日） | 照会先（Credly） |
-|---|---|---|
-| AIへ渡す前の個人情報の置き換え（氏名・電話・メール・個人番号・住所・金額） | Coursera（認定：IBM）「Generative AI: Impact, Considerations, and Ethical Issues」2026年11月11日 | https://www.credly.com/badges/17087670-8825-43bc-8c8e-b4dd9b98cc8a |
-| ハッシュチェーンによる監査ログと改ざんの検出 | Coursera「Google Cybersecurity Professional Certificate(v.2)」2026年11月12日 | https://www.credly.com/badges/90bbb775-f9b8-4aef-bc24-1ed7c67d17e4 |
-| 外部へ送信する機能を持たない構成 | Amazon Web Services Training and Certification「AWS Knowledge: Security Champion - Training Badge」2025年11月10日 | https://www.credly.com/badges/ddab077d-58eb-4807-bec1-69e5c6aeb9a5 |
+| 求められる力 | 機能 | 裏付けになる学習（発行元・名称・発行日） | 照会先（Credly） |
+|---|---|---|---|
+| セキュリティ・ガバナンス | AIへ渡す前の個人情報の置き換え（氏名・電話・メール・個人番号・住所・金額） | Coursera（認定：IBM）「Generative AI: Impact, Considerations, and Ethical Issues」2026年11月11日 | https://www.credly.com/badges/17087670-8825-43bc-8c8e-b4dd9b98cc8a |
+| セキュリティ・ガバナンス | ハッシュチェーンによる監査ログと改ざんの検出 | Coursera「Google Cybersecurity Professional Certificate(v.2)」2026年11月12日 | https://www.credly.com/badges/90bbb775-f9b8-4aef-bc24-1ed7c67d17e4 |
+| セキュリティ・ガバナンス | 外部へ送信する機能を持たない構成 | Amazon Web Services Training and Certification「AWS Knowledge: Security Champion - Training Badge」2025年11月10日 | https://www.credly.com/badges/ddab077d-58eb-4807-bec1-69e5c6aeb9a5 |
+
+「求められる力」の分け方は、[プロフィール](https://github.com/takashi-101) の「FDE・AXで求められる力と、その根拠」と同じです。
 
 ## ライセンス
 MIT（[LICENSE](LICENSE)）
